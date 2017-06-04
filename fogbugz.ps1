@@ -197,6 +197,8 @@ Configuration xFogBugz
     [string] $wwwroot
   )
 
+  Import-DscResource -Module xWebAdministration
+
   FogBugzPrerequisites FogBugzPrerequisites
   {}
 
@@ -204,6 +206,22 @@ Configuration xFogBugz
   {
     Path = $fogbugzArchivePath
     Destination = $wwwroot
+  }
+
+  xWebsite FogBugzWebsite
+  {
+    Ensure       = "Present"
+    Name         = "FogBugz"
+    State        = "Started"
+    PhysicalPath = $wwwroot
+    BindingInfo  = @(
+      MSFT_xWebBindingInformation
+      {
+        Protocol = "HTTP"
+        Port     = 80
+      }
+    )
+    DependsOn       = "[Archive]FogBugzDistZip"
   }
 }
 

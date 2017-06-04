@@ -11,6 +11,15 @@ payloads for Windows Remote Management.
 winrm set winrm/config @{MaxEnvelopeSizekb="8192"}
 ```
 
+Enable and trust the PowerShell Gallery and install required DSC modules:
+
+```powershell
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201
+
+Install-Module -Name xWebAdministration
+```
+
 Run the configuration script `fogbugz.ps1` to install IIS, .NET 2.0 and ASP.NET 3.5:
 
 ```powershell
