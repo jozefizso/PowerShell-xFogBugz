@@ -213,7 +213,7 @@ Configuration xFogBugz
     Ensure       = "Present"
     Name         = "FogBugz"
     State        = "Started"
-    PhysicalPath = $wwwroot
+    PhysicalPath = "$wwwroot\website"
     BindingInfo  = @(
       MSFT_xWebBindingInformation
       {
