@@ -199,6 +199,7 @@ Configuration xFogBugz
 
   Import-DscResource -Module PSDesiredStateConfiguration
   Import-DscResource -Module xWebAdministration
+  Import-DscResource -Module cNtfsAccessControl
 
   FogBugzPrerequisites FogBugzPrerequisites
   {}
@@ -243,6 +244,43 @@ Configuration xFogBugz
     MembersToInclude = @("FogBugz")
     DependsOn        = "[User]FogBugzUserAccount"
     Ensure           = "Present"
+  }
+
+  cNtfsPermissionEntry FogBugzWebsiteRootPermissions
+  {
+    Principal = "FogBugz"
+    Path      = "$wwwroot"
+    AccessControlInformation = @(
+      cNtfsAccessControlInformation
+      {
+        AccessControlType = "Allow"
+        FileSystemRights = "Read"
+      }
+    )
+    DependsOn = "[User]FogBugzUserAccount", "[Archive]FogBugzDistZip"
+    Ensure    = "Present"
+  }
+
+  File FogBugzWebsiteFileUploadsDirectory
+  {
+      Type = "Directory"
+      DestinationPath = "$wwwroot\FileUploads"
+      Ensure = "Present"
+  }
+
+  cNtfsPermissionEntry FogBugzWebsiteUploadPermissions
+  {
+    Principal = "FogBugz"
+    Path      = "$wwwroot\FileUploads"
+    AccessControlInformation = @(
+      cNtfsAccessControlInformation
+      {
+        AccessControlType = "Allow"
+        FileSystemRights = "Read,Write"
+      }
+    )
+    DependsOn = "[User]FogBugzUserAccount", "[File]FogBugzWebsiteFileUploadsDirectory"
+    Ensure    = "Present"
   }
 }
 

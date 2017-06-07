@@ -18,6 +18,7 @@ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
 Install-Module -Name xWebAdministration
+Install-Module -Name cNtfsAccessControl
 ```
 
 Run the configuration script `fogbugz.ps1` to install IIS, .NET 2.0 and ASP.NET 3.5:
