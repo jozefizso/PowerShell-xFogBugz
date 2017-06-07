@@ -197,6 +197,7 @@ Configuration xFogBugz
     [string] $wwwroot
   )
 
+  Import-DscResource -Module PSDesiredStateConfiguration
   Import-DscResource -Module xWebAdministration
 
   FogBugzPrerequisites FogBugzPrerequisites
@@ -234,6 +235,14 @@ Configuration xFogBugz
       PasswordChangeRequired = $false
       PasswordNeverExpires = $true
       Ensure = "Present"
+  }
+
+  GroupSet FogBugzUserGroupMembership
+  {
+    GroupName        = @("IIS_IUSRS")
+    MembersToInclude = @("FogBugz")
+    DependsOn        = "[User]FogBugzUserAccount"
+    Ensure           = "Present"
   }
 }
 
