@@ -1,6 +1,6 @@
 Configuration FogBugzPrerequisites
 {
-  Import-DscResource –ModuleName 'PSDesiredStateConfiguration'
+  Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
 
   # Web Server (IIS)
   WindowsFeature Web-Server
