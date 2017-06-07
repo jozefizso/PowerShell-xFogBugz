@@ -223,6 +223,18 @@ Configuration xFogBugz
     )
     DependsOn       = "[Archive]FogBugzDistZip"
   }
+
+  User FogBugzUserAccount
+  {
+      UserName = "FogBugz"
+      Description = "Account for running FogBugz website and maintanance service."
+      Disabled = $false
+      FullName = "FogBugz User"
+      PasswordChangeNotAllowed = $true
+      PasswordChangeRequired = $false
+      PasswordNeverExpires = $true
+      Ensure = "Present"
+  }
 }
 
 
