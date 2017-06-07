@@ -238,7 +238,7 @@ Configuration xFogBugz
         State       = "Running"
         Path        = "$wwwroot\Accessories\FogBugzMaint.exe"
         Credential  = $user
-        DependsOn   = "[User]FogBugzUserAccount"
+        DependsOn   = "[User]FogBugzUserAccount", "[Archive]FogBugzDistZip"
     }
 
     User FogBugzUserAccount
