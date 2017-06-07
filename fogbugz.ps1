@@ -1,6 +1,6 @@
 Configuration FogBugzPrerequisites
 {
-  Import-DscResource -ModuleName 'PSDesiredStateConfiguration'
+  Import-DscResource -ModuleName PSDscResources
 
   # Web Server (IIS)
   WindowsFeature Web-Server
@@ -194,101 +194,130 @@ Configuration xFogBugz
     [Parameter(Mandatory = $true)]
     [string] $fogbugzArchivePath,
     [Parameter(Mandatory = $true)]
-    [string] $wwwroot
+    [string] $wwwroot,
+    [Parameter(Mandatory = $true)]
+    [PSCredential] $user
   )
 
-  Import-DscResource -Module PSDesiredStateConfiguration
+  Import-DscResource -Module PSDscResources
   Import-DscResource -Module xWebAdministration
   Import-DscResource -Module cNtfsAccessControl
 
-  FogBugzPrerequisites FogBugzPrerequisites
-  {}
-
-  Archive FogBugzDistZip
+  Node localhost
   {
-    Path = $fogbugzArchivePath
-    Destination = $wwwroot
-  }
+    FogBugzPrerequisites FogBugzPrerequisites
+    {}
 
-  xWebsite FogBugzWebsite
-  {
-    Ensure       = "Present"
-    Name         = "FogBugz"
-    State        = "Started"
-    PhysicalPath = "$wwwroot\website"
-    BindingInfo  = @(
-      MSFT_xWebBindingInformation
-      {
-        Protocol = "HTTP"
-        Port     = 80
-      }
-    )
-    DependsOn       = "[Archive]FogBugzDistZip"
-  }
+    Archive FogBugzDistZip
+    {
+      Path = $fogbugzArchivePath
+      Destination = $wwwroot
+    }
 
-  User FogBugzUserAccount
-  {
-      UserName = "FogBugz"
-      Description = "Account for running FogBugz website and maintanance service."
-      Disabled = $false
-      FullName = "FogBugz User"
-      PasswordChangeNotAllowed = $true
-      PasswordChangeRequired = $false
-      PasswordNeverExpires = $true
-      Ensure = "Present"
-  }
+    xWebsite FogBugzWebsite
+    {
+      Ensure       = "Present"
+      Name         = "FogBugz"
+      State        = "Started"
+      PhysicalPath = "$wwwroot\website"
+      BindingInfo  = @(
+        MSFT_xWebBindingInformation
+        {
+          Protocol = "HTTP"
+          Port     = 80
+        }
+      )
+      DependsOn       = "[Archive]FogBugzDistZip"
+    }
 
-  GroupSet FogBugzUserGroupMembership
-  {
-    GroupName        = @("IIS_IUSRS")
-    MembersToInclude = @("FogBugz")
-    DependsOn        = "[User]FogBugzUserAccount"
-    Ensure           = "Present"
-  }
+    Service FogBugzMaintenanceService
+    {
+        Name        = "FogBugz Maintenance Service"
+        Description = "Performs regular maintenance on FogBugz databases"
+        StartupType = "Automatic"
+        State       = "Running"
+        Path        = "$wwwroot\Accessories\FogBugzMaint.exe"
+        Credential  = $user
+        DependsOn   = "[User]FogBugzUserAccount"
+    }
 
-  cNtfsPermissionEntry FogBugzWebsiteRootPermissions
-  {
-    Principal = "FogBugz"
-    Path      = "$wwwroot"
-    AccessControlInformation = @(
-      cNtfsAccessControlInformation
-      {
-        AccessControlType = "Allow"
-        FileSystemRights = "Read"
-      }
-    )
-    DependsOn = "[User]FogBugzUserAccount", "[Archive]FogBugzDistZip"
-    Ensure    = "Present"
-  }
+    User FogBugzUserAccount
+    {
+        UserName = "FogBugz"
+        Description = "Account for running FogBugz website and maintanance service."
+        Disabled = $false
+        FullName = "FogBugz User"
+        Password = $user
+        PasswordChangeNotAllowed = $true
+        PasswordChangeRequired = $false
+        PasswordNeverExpires = $true
+        Ensure = "Present"
+    }
 
-  File FogBugzWebsiteFileUploadsDirectory
-  {
-      Type = "Directory"
-      DestinationPath = "$wwwroot\FileUploads"
-      Ensure = "Present"
-  }
+    GroupSet FogBugzUserGroupMembership
+    {
+      GroupName        = @("IIS_IUSRS")
+      MembersToInclude = @("FogBugz")
+      DependsOn        = "[User]FogBugzUserAccount"
+      Ensure           = "Present"
+    }
 
-  cNtfsPermissionEntry FogBugzWebsiteUploadPermissions
-  {
-    Principal = "FogBugz"
-    Path      = "$wwwroot\FileUploads"
-    AccessControlInformation = @(
-      cNtfsAccessControlInformation
-      {
-        AccessControlType = "Allow"
-        FileSystemRights = "Read,Write"
-      }
-    )
-    DependsOn = "[User]FogBugzUserAccount", "[File]FogBugzWebsiteFileUploadsDirectory"
-    Ensure    = "Present"
+    cNtfsPermissionEntry FogBugzWebsiteRootPermissions
+    {
+      Principal = "FogBugz"
+      Path      = "$wwwroot"
+      AccessControlInformation = @(
+        cNtfsAccessControlInformation
+        {
+          AccessControlType = "Allow"
+          FileSystemRights = "Read"
+        }
+      )
+      DependsOn = "[User]FogBugzUserAccount", "[Archive]FogBugzDistZip"
+      Ensure    = "Present"
+    }
+
+    File FogBugzWebsiteFileUploadsDirectory
+    {
+        Type = "Directory"
+        DestinationPath = "$wwwroot\FileUploads"
+        Ensure = "Present"
+    }
+
+    cNtfsPermissionEntry FogBugzWebsiteUploadPermissions
+    {
+      Principal = "FogBugz"
+      Path      = "$wwwroot\FileUploads"
+      AccessControlInformation = @(
+        cNtfsAccessControlInformation
+        {
+          AccessControlType = "Allow"
+          FileSystemRights = "Read,Write"
+        }
+      )
+      DependsOn = "[User]FogBugzUserAccount", "[File]FogBugzWebsiteFileUploadsDirectory"
+      Ensure    = "Present"
+    }
   }
 }
 
+$config = @{
+  AllNodes = @(
+    @{
+      NodeName = "localhost"
+      PSDscAllowPlainTextPassword = $true
+    }
+  )
+}
 
 $fogbugzArchive = 'C:\install\FogBugz-8.8.55.zip'
 $wwwroot = 'C:\inetpub\fogbugz'
 
+$username = "FogBugz"
+$password = "FogBugzUser1234!@#$" | ConvertTo-SecureString -AsPlainText -Force
+$credential = New-Object System.Management.Automation.PSCredential($username, $password)
+
 # Compile the web server prerequisites
-xFogBugz -fogbugzArchivePath $fogbugzArchive -wwwroot $wwwroot
+xFogBugz -ConfigurationData $config -fogbugzArchivePath $fogbugzArchive -wwwroot $wwwroot -user $credential
 
 Start-DscConfiguration -Path .\xFogBugz -Verbose -Wait
