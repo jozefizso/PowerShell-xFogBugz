@@ -1,6 +1,6 @@
 Configuration FogBugzPrerequisites
 {
-  Import-DscResource -ModuleName PSDscResources
+  Import-DscResource -ModuleName xPSDesiredStateConfiguration
 
   # Web Server (IIS)
   WindowsFeature Web-Server
@@ -188,6 +188,94 @@ Configuration FogBugzPrerequisites
   }
 }
 
+Configuration xFogBugzRegistrySettings
+{
+  param (
+    [Parameter(Mandatory = $true)]
+    [string] $wwwroot,
+    [Parameter(Mandatory = $true)]
+    [string] $dbHost,
+    [Parameter(Mandatory = $true)]
+    [string] $dbPort = 3306,
+    [Parameter(Mandatory = $true)]
+    [string] $dbName,
+    [Parameter(Mandatory = $true)]
+    [string] $dbUser,
+    [Parameter(Mandatory = $true)]
+    [string] $dbPassword
+  )
+
+  Import-DscResource -ModuleName xPSDesiredStateConfiguration
+
+  $installId = $wwwroot.Replace('\', '/')
+  $regPath = "HKLM:\SOFTWARE\Fog Creek Software\FogBugz\$installId"
+  $localMachineName = $env:COMPUTERNAME
+
+  xRegistry FogBugzRegistry_sConnectionString
+  {
+      Key         = "$regPath"
+      ValueName   = "sConnectionString"
+      # Option=16384 (= Treat BIGINT columns as INT columns)
+      ValueData   = "Driver={mysql};Server=$dbHost;Port=$dbPort;Database=$dbName;User=$dbUser;Password=$dbPassword;Option=16387"
+      Ensure      = "Present"
+      Force       = $true
+  }
+  
+  xRegistry FogBugzRegistry_sInstallerUrl
+  {
+      Key         = "$regPath"
+      ValueName   = "sInstallerUrl"
+      ValueData   = "http://$localMachineName/"
+      Ensure      = "Present"
+      Force       = $true
+  }
+  
+  xRegistry FogBugzRegistry_sURL
+  {
+      Key         = "$regPath"
+      ValueName   = "sURL"
+      ValueData   = "http://$localMachineName"
+      Ensure      = "Present"
+      Force       = $true
+  }
+
+  xRegistry FogBugzRegistry_sLanguage
+  {
+      Key         = "$regPath"
+      ValueName   = "sLanguage"
+      ValueData   = "en-us"
+      Ensure      = "Present"
+      Force       = $true
+  }
+  
+  xRegistry FogBugzRegistry_sRegistryVersion
+  {
+      Key         = "$regPath"
+      ValueName   = "sRegistryVersion"
+      ValueData   = "4"
+      Ensure      = "Present"
+      Force       = $true
+  }
+  
+  xRegistry FogBugzRegistry_fDemo
+  {
+      Key         = "$regPath"
+      ValueName   = "fDemo"
+      ValueData   = "0"
+      Ensure      = "Present"
+      Force       = $true
+  }
+  
+  xRegistry FogBugzRegistry_fDebug
+  {
+      Key         = "$regPath"
+      ValueName   = "fDebug"
+      ValueData   = "0"
+      Ensure      = "Present"
+      Force       = $true
+  }
+}
+
 Configuration xFogBugz
 {
   param (
@@ -199,7 +287,7 @@ Configuration xFogBugz
     [PSCredential] $user
   )
 
-  Import-DscResource -Module PSDscResources
+  Import-DscResource -Module xPSDesiredStateConfiguration
   Import-DscResource -Module xWebAdministration
   Import-DscResource -Module cNtfsAccessControl
 
@@ -254,7 +342,7 @@ Configuration xFogBugz
         Ensure = "Present"
     }
 
-    GroupSet FogBugzUserGroupMembership
+    xGroupSet FogBugzUserGroupMembership
     {
       GroupName        = @("IIS_IUSRS")
       MembersToInclude = @("FogBugz")
@@ -318,6 +406,17 @@ $password = "FogBugzUser1234!@#$" | ConvertTo-SecureString -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential($username, $password)
 
 # Compile the web server prerequisites
-xFogBugz -ConfigurationData $config -fogbugzArchivePath $fogbugzArchive -wwwroot $wwwroot -user $credential
+#xFogBugz -ConfigurationData $config -fogbugzArchivePath $fogbugzArchive -wwwroot $wwwroot -user $credential
+#Start-DscConfiguration -Path .\xFogBugz -Verbose -Wait
 
-Start-DscConfiguration -Path .\xFogBugz -Verbose -Wait
+# Compile database configuration
+$wwwroot = "C:\inetpub\fogbugz\website"
+$dbHost = "localhost"
+$dbPort = 3306
+$dbName = "fogbugz"
+$dbUser = "fb_user"
+$dbPassword = "FogBugzUser1234!@#$"
+
+xFogBugzRegistrySettings -wwwroot $wwwroot -dbHost $dbHost -dbPort $dbPort -dbName $dbName -dbUser $dbUser -dbPassword $dbPassword
+Start-DscConfiguration -Path .\xFogBugzRegistrySettings -Verbose -Wait
+
