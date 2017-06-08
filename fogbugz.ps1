@@ -274,6 +274,29 @@ Configuration xFogBugzRegistrySettings
       Ensure      = "Present"
       Force       = $true
   }
+
+  xScript ScriptExample
+  {
+    SetScript = {
+      $acl = Get-Acl -Path 'HKLM:\SOFTWARE\Fog Creek Software\FogBugz'
+      $rule = New-Object System.Security.AccessControl.RegistryAccessRule("FogBugz", "FullControl", "ContainerInherit", "None", "Allow")
+      $acl.SetAccessRule($rule)
+      $acl | Set-Acl -Path 'HKLM:\SOFTWARE\Fog Creek Software\FogBugz'
+    }
+    TestScript = {
+      $acl = Get-Acl -Path 'HKLM:\SOFTWARE\Fog Creek Software\FogBugz'
+      $fbAcl = $acl.Access | Where-Object { $_.IdentityReference -eq "$env:COMPUTERNAME\FogBugz" }
+
+      return $fbAcl -and ($fbAcl.RegistryRights -eq 'FullControl') -and ($fbAcl.AccessControlType -eq 'Allow') -and ($fbAcl.InheritanceFlags -eq 'ContainerInherit')
+    }
+    GetScript = {
+      $acl = Get-Acl -Path 'HKLM:\SOFTWARE\Fog Creek Software\FogBugz'
+
+      return @{
+          Result = $acl
+      }
+    }
+  }
 }
 
 Configuration xFogBugz
