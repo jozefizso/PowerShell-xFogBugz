@@ -303,9 +303,7 @@ Configuration xFogBugz
 {
   param (
     [Parameter(Mandatory = $true)]
-    [string] $fogbugzSourcePath,
-    [Parameter(Mandatory = $true)]
-    [string] $wwwroot,
+    [string] $fogbugzDeployPath,
     [Parameter(Mandatory = $true)]
     [PSCredential] $user
   )
@@ -316,15 +314,15 @@ Configuration xFogBugz
 
   Node localhost
   {
+    $wwwroot = $fogbugzDeployPath + '\website'
+
     FogBugzPrerequisites FogBugzPrerequisites
     {}
 
     File FogBugzDist
     {
       Type = "Directory"
-      Recurse = $true
-      SourcePath = $fogbugzSourcePath
-      DestinationPath = $wwwroot
+      DestinationPath = $fogbugzDeployPath
       Ensure = "Present"
     }
 
@@ -333,7 +331,7 @@ Configuration xFogBugz
       Ensure       = "Present"
       Name         = "FogBugz"
       State        = "Started"
-      PhysicalPath = "$wwwroot\website"
+      PhysicalPath = "$wwwroot"
       BindingInfo  = @(
         MSFT_xWebBindingInformation
         {
@@ -342,16 +340,17 @@ Configuration xFogBugz
           HostName = $env:COMPUTERNAME
         }
       )
-      DependsOn       = "[File]FogBugzDist"
+      DependsOn       = "[File]FogBugzDist", "[FogBugzPrerequisites]FogBugzPrerequisites"
     }
 
+    # The Service resource requires PSDscResources@2.7.0.0 to correctly configure Windows Service
     Service FogBugzMaintenanceService
     {
       Name        = "FogBugz Maintenance Service"
       Description = "Performs regular maintenance on FogBugz databases"
       StartupType = "Automatic"
       State       = "Running"
-      Path        = "$wwwroot\Accessories\FogBugzMaint.exe"
+      Path        = "$fogbugzDeployPath\Accessories\FogBugzMaint.exe"
       Credential  = $user
       DependsOn   = "[User]FogBugzUserAccount", "[File]FogBugzDist"
     }
@@ -425,19 +424,18 @@ $config = @{
   )
 }
 
-$fogbugzSourcePath = 'C:\install\FogBugz-8.8.55'
-$wwwroot = 'C:\inetpub\fogbugz'
+$fogbugzDeployPath = 'C:\inetpub\fogbugz'
+$wwwroot = $fogbugzDeployPath + '\website'
 
 $username = "FogBugz"
 $password = 'FogBugzPwd1234!@#$' | ConvertTo-SecureString -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential($username, $password)
 
 # Compile the web server prerequisites
-xFogBugz -ConfigurationData $config -fogbugzSourcePath $fogbugzSourcePath -wwwroot $wwwroot -user $credential
+xFogBugz -ConfigurationData $config -fogbugzDeployPath $fogbugzDeployPath -user $credential
 Start-DscConfiguration -Path .\xFogBugz -Verbose -Wait -Force
 
 # Compile database configuration
-$wwwroot = "C:\inetpub\fogbugz\website"
 $dbHost = "localhost"
 $dbPort = 3306
 $dbName = "fogbugz"
