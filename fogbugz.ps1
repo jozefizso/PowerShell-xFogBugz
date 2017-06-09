@@ -331,6 +331,7 @@ Configuration xFogBugz
       Ensure       = "Present"
       Name         = "FogBugz"
       State        = "Started"
+      ApplicationPool = "FogBugz AppPool"
       PhysicalPath = "$wwwroot"
       BindingInfo  = @(
         MSFT_xWebBindingInformation
@@ -340,7 +341,21 @@ Configuration xFogBugz
           HostName = $env:COMPUTERNAME
         }
       )
-      DependsOn       = "[File]FogBugzDist", "[FogBugzPrerequisites]FogBugzPrerequisites"
+      DependsOn       = "[File]FogBugzDist", "[xWebAppPool]FogBugzWebsiteAppPool". "[FogBugzPrerequisites]FogBugzPrerequisites"
+    }
+
+    xWebAppPool FogBugzWebsiteAppPool
+    {
+      Ensure = "Present"
+      Name = "FogBugz AppPool"
+      State = "Started"
+      AutoStart = $true
+      IdentityType = "SpecificUser"
+      Credential = $user
+      LoadUserProfile = $true
+      ManagedRuntimeVersion = "v2.0"
+      ManagedPipelineMode = "Integrated"
+      StartMode = "AlwaysRunning"
     }
 
     # The Service resource requires PSDscResources@2.7.0.0 to correctly configure Windows Service
@@ -379,7 +394,7 @@ Configuration xFogBugz
     cNtfsPermissionEntry FogBugzWebsiteRootPermissions
     {
       Principal = "FogBugz"
-      Path      = "$wwwroot"
+      Path      = "$fogbugzDeployPath"
       AccessControlInformation = @(
         cNtfsAccessControlInformation
         {
@@ -394,14 +409,14 @@ Configuration xFogBugz
     File FogBugzWebsiteFileUploadsDirectory
     {
       Type = "Directory"
-      DestinationPath = "$wwwroot\FileUploads"
+      DestinationPath = "$fogbugzDeployPath\FileUploads"
       Ensure = "Present"
     }
 
     cNtfsPermissionEntry FogBugzWebsiteUploadPermissions
     {
       Principal = "FogBugz"
-      Path      = "$wwwroot\FileUploads"
+      Path      = "$fogbugzDeployPath\FileUploads"
       AccessControlInformation = @(
         cNtfsAccessControlInformation
         {
