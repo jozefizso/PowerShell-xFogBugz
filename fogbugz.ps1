@@ -341,7 +341,7 @@ Configuration xFogBugz
           HostName = $env:COMPUTERNAME
         }
       )
-      DependsOn       = "[File]FogBugzDist", "[xWebAppPool]FogBugzWebsiteAppPool". "[FogBugzPrerequisites]FogBugzPrerequisites"
+      DependsOn       = "[File]FogBugzDist", "[xWebAppPool]FogBugzWebsiteAppPool", "[FogBugzPrerequisites]FogBugzPrerequisites"
     }
 
     xWebAppPool FogBugzWebsiteAppPool
