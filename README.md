@@ -18,6 +18,7 @@ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
 Install-Module -Name PSDscResources -RequiredVersion 2.7.0.0
+Install-Module -Name xPSDesiredStateConfiguration
 Install-Module -Name xWebAdministration
 Install-Module -Name cNtfsAccessControl
 ```

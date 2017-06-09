@@ -1,6 +1,6 @@
 Configuration FogBugzPrerequisites
 {
-  Import-DscResource -ModuleName xPSDesiredStateConfiguration
+  Import-DscResource -ModuleName PSDscResources
 
   # Web Server (IIS)
   WindowsFeature Web-Server
@@ -220,7 +220,7 @@ Configuration xFogBugzRegistrySettings
       Ensure      = "Present"
       Force       = $true
   }
-  
+
   xRegistry FogBugzRegistry_sInstallerUrl
   {
       Key         = "$regPath"
@@ -229,7 +229,7 @@ Configuration xFogBugzRegistrySettings
       Ensure      = "Present"
       Force       = $true
   }
-  
+
   xRegistry FogBugzRegistry_sURL
   {
       Key         = "$regPath"
@@ -247,7 +247,7 @@ Configuration xFogBugzRegistrySettings
       Ensure      = "Present"
       Force       = $true
   }
-  
+
   xRegistry FogBugzRegistry_sRegistryVersion
   {
       Key         = "$regPath"
@@ -256,7 +256,7 @@ Configuration xFogBugzRegistrySettings
       Ensure      = "Present"
       Force       = $true
   }
-  
+
   xRegistry FogBugzRegistry_fDemo
   {
       Key         = "$regPath"
@@ -265,7 +265,7 @@ Configuration xFogBugzRegistrySettings
       Ensure      = "Present"
       Force       = $true
   }
-  
+
   xRegistry FogBugzRegistry_fDebug
   {
       Key         = "$regPath"
@@ -303,14 +303,14 @@ Configuration xFogBugz
 {
   param (
     [Parameter(Mandatory = $true)]
-    [string] $fogbugzArchivePath,
+    [string] $fogbugzSourcePath,
     [Parameter(Mandatory = $true)]
     [string] $wwwroot,
     [Parameter(Mandatory = $true)]
     [PSCredential] $user
   )
 
-  Import-DscResource -Module xPSDesiredStateConfiguration
+  Import-DscResource -Module PSDscResources
   Import-DscResource -Module xWebAdministration
   Import-DscResource -Module cNtfsAccessControl
 
@@ -319,10 +319,13 @@ Configuration xFogBugz
     FogBugzPrerequisites FogBugzPrerequisites
     {}
 
-    Archive FogBugzDistZip
+    File FogBugzDist
     {
-      Path = $fogbugzArchivePath
-      Destination = $wwwroot
+      Type = "Directory"
+      Recurse = $true
+      SourcePath = $fogbugzSourcePath
+      DestinationPath = $wwwroot
+      Ensure = "Present"
     }
 
     xWebsite FogBugzWebsite
@@ -338,40 +341,40 @@ Configuration xFogBugz
           Port     = 80
         }
       )
-      DependsOn       = "[Archive]FogBugzDistZip"
+      DependsOn       = "[File]FogBugzDist"
     }
 
     Service FogBugzMaintenanceService
     {
-        Name        = "FogBugz Maintenance Service"
-        Description = "Performs regular maintenance on FogBugz databases"
-        StartupType = "Automatic"
-        State       = "Running"
-        Path        = "$wwwroot\Accessories\FogBugzMaint.exe"
-        Credential  = $user
-        DependsOn   = "[User]FogBugzUserAccount", "[Archive]FogBugzDistZip"
+      Name        = "FogBugz Maintenance Service"
+      Description = "Performs regular maintenance on FogBugz databases"
+      StartupType = "Automatic"
+      State       = "Running"
+      Path        = "$wwwroot\Accessories\FogBugzMaint.exe"
+      Credential  = $user
+      DependsOn   = "[User]FogBugzUserAccount", "[File]FogBugzDist"
     }
 
     User FogBugzUserAccount
     {
-        UserName = "FogBugz"
-        Description = "Account for running FogBugz website and maintanance service."
-        Disabled = $false
-        FullName = "FogBugz User"
-        Password = $user
-        PasswordChangeNotAllowed = $true
-        PasswordChangeRequired = $false
-        PasswordNeverExpires = $true
-        Ensure = "Present"
+      UserName = "FogBugz"
+      Description = "Account for running FogBugz website and maintanance service."
+      Disabled = $false
+      FullName = "FogBugz User"
+      Password = $user
+      PasswordChangeNotAllowed = $true
+      PasswordChangeRequired = $false
+      PasswordNeverExpires = $true
+      Ensure = "Present"
     }
 
-    xGroupSet FogBugzUserGroupMembership
-    {
-      GroupName        = @("IIS_IUSRS")
-      MembersToInclude = @("FogBugz")
-      DependsOn        = "[User]FogBugzUserAccount"
-      Ensure           = "Present"
-    }
+    #GroupSet FogBugzUserGroupMembership
+    #{
+    #  GroupName        = @("IIS_IUSRS")
+    #  MembersToInclude = @("FogBugz")
+    #  DependsOn        = "[User]FogBugzUserAccount"
+    #  Ensure           = "Present"
+    #}
 
     cNtfsPermissionEntry FogBugzWebsiteRootPermissions
     {
@@ -384,15 +387,15 @@ Configuration xFogBugz
           FileSystemRights = "Read"
         }
       )
-      DependsOn = "[User]FogBugzUserAccount", "[Archive]FogBugzDistZip"
+      DependsOn = "[User]FogBugzUserAccount", "[File]FogBugzDist"
       Ensure    = "Present"
     }
 
     File FogBugzWebsiteFileUploadsDirectory
     {
-        Type = "Directory"
-        DestinationPath = "$wwwroot\FileUploads"
-        Ensure = "Present"
+      Type = "Directory"
+      DestinationPath = "$wwwroot\FileUploads"
+      Ensure = "Present"
     }
 
     cNtfsPermissionEntry FogBugzWebsiteUploadPermissions
@@ -421,16 +424,16 @@ $config = @{
   )
 }
 
-$fogbugzArchive = 'C:\install\FogBugz-8.8.55.zip'
+$fogbugzSourcePath = 'C:\install\FogBugz-8.8.55'
 $wwwroot = 'C:\inetpub\fogbugz'
 
 $username = "FogBugz"
-$password = "FogBugzUser1234!@#$" | ConvertTo-SecureString -AsPlainText -Force
+$password = 'FogBugzPwd1234!@#$' | ConvertTo-SecureString -AsPlainText -Force
 $credential = New-Object System.Management.Automation.PSCredential($username, $password)
 
 # Compile the web server prerequisites
-#xFogBugz -ConfigurationData $config -fogbugzArchivePath $fogbugzArchive -wwwroot $wwwroot -user $credential
-#Start-DscConfiguration -Path .\xFogBugz -Verbose -Wait
+xFogBugz -ConfigurationData $config -fogbugzSourcePath $fogbugzSourcePath -wwwroot $wwwroot -user $credential
+Start-DscConfiguration -Path .\xFogBugz -Verbose -Wait -Force
 
 # Compile database configuration
 $wwwroot = "C:\inetpub\fogbugz\website"
@@ -438,8 +441,8 @@ $dbHost = "localhost"
 $dbPort = 3306
 $dbName = "fogbugz"
 $dbUser = "fb_user"
-$dbPassword = "FogBugzUser1234!@#$"
+$dbPassword = 'FogBugzPwd1234!@#$'
 
-xFogBugzRegistrySettings -wwwroot $wwwroot -dbHost $dbHost -dbPort $dbPort -dbName $dbName -dbUser $dbUser -dbPassword $dbPassword
-Start-DscConfiguration -Path .\xFogBugzRegistrySettings -Verbose -Wait
+#xFogBugzRegistrySettings -wwwroot $wwwroot -dbHost $dbHost -dbPort $dbPort -dbName $dbName -dbUser $dbUser -dbPassword $dbPassword
+#Start-DscConfiguration -Path .\xFogBugzRegistrySettings -Verbose -Wait -Force
 
