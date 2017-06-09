@@ -339,6 +339,7 @@ Configuration xFogBugz
         {
           Protocol = "HTTP"
           Port     = 80
+          HostName = $env:COMPUTERNAME
         }
       )
       DependsOn       = "[File]FogBugzDist"
