@@ -427,6 +427,51 @@ Configuration xFogBugz
       DependsOn = "[User]FogBugzUserAccount", "[File]FogBugzWebsiteFileUploadsDirectory"
       Ensure    = "Present"
     }
+
+    cNtfsPermissionEntry FogBugzWebsitePluginsPermissions
+    {
+      Principal = "FogBugz"
+      Path      = "$fogbugzDeployPath\plugins"
+      AccessControlInformation = @(
+        cNtfsAccessControlInformation
+        {
+          AccessControlType = "Allow"
+          FileSystemRights = "FullControl"
+        }
+      )
+      DependsOn = "[User]FogBugzUserAccount"
+      Ensure    = "Present"
+    }
+
+    cNtfsPermissionEntry FogBugzWebsiteBinPermissions
+    {
+      Principal = "FogBugz"
+      Path      = "$fogbugzDeployPath\Website\bin"
+      AccessControlInformation = @(
+        cNtfsAccessControlInformation
+        {
+          AccessControlType = "Allow"
+          FileSystemRights = "ReadAndExecute"
+        }
+      )
+      DependsOn = "[User]FogBugzUserAccount"
+      Ensure    = "Present"
+    }
+
+    cNtfsPermissionEntry FogBugzWebsiteAccessoriesPermissions
+    {
+      Principal = "FogBugz"
+      Path      = "$fogbugzDeployPath\Accessories"
+      AccessControlInformation = @(
+        cNtfsAccessControlInformation
+        {
+          AccessControlType = "Allow"
+          FileSystemRights = "Read,Write"
+        }
+      )
+      DependsOn = "[User]FogBugzUserAccount"
+      Ensure    = "Present"
+    }
   }
 }
 
